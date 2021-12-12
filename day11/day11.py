@@ -1,38 +1,51 @@
+from collections import defaultdict
+
+
+flashed = defaultdict(lambda: False)
+
+
+def flash(x, y, lines):
+    total_flashes = 0
+    for dx in (-1, 0, 1):
+        if 0 > x + dx or x + dx >= len(lines[0]):
+            continue
+        for dy in (-1, 0, 1):
+            if 0 > y + dy or y + dy >= len(lines):
+                continue
+            if lines[x  + dx][y + dy] == 9:
+                if flashed[(x + dx, y + dy)]:
+                    continue
+                flashed[(x + dx, y + dy)] = True
+                total_flashes += 1 + flash(x + dx, y + dy, lines)
+                lines[x + dx][y + dy] = 0
+            else:
+                lines[x + dx][y + dy] += 1
+    return total_flashes
+
+
 def main():
     with open("input.txt", "r") as f:
-        lines = f.readlines()
-        point_mapping = {
-            "(": 1,
-            "[": 2,
-            "{": 3,
-            "<": 4
-        }
-        points = []
-        for line in lines:
-            autocomplete_points = 0
-            prev_line = line
-            line = line.strip()
-            while line != prev_line and line:
-                prev_line = line
-                line = line.replace("()", "")
-                line = line.replace("[]", "")
-                line = line.replace("{}", "")
-                line = line.replace("<>", "")
+        lines = [[int(i) for i in list(subline.strip())] for subline in f.readlines()]
 
-            uncorrupted = True
-            for char in line:
-                if char not in point_mapping.keys():
-                    uncorrupted = False
-                    break
-            if not uncorrupted:
-                continue
+        total_flashes = 0
 
-            for char in line[::-1]:
-                autocomplete_points = autocomplete_points * 5 + point_mapping[char]
-            # print(autocomplete_points)
-            points.append(autocomplete_points)
-        points = sorted(points)
-        print(points[len(points) // 2])
+        day = 0
+
+        while True:
+            for x, line in enumerate(lines):
+                for y, square in enumerate(line):
+                    if square == 9:
+                        flashed[(x, y)] = True
+                        total_flashes += 1 + flash(x, y, lines)
+                    else:
+                        lines[x][y] += 1
+            day += 1
+            if len(flashed.keys()) == len(lines) * len(lines[0]):
+                print(day)
+                return
+            for x, y in flashed.keys():
+                lines[x][y] = 0
+            flashed.clear()
 
 
 if __name__ == '__main__':
@@ -42,30 +55,49 @@ if __name__ == '__main__':
 """
 p1:
 
-with open("input.txt", "r") as f:
-    lines = f.readlines()
-    point_mapping = {
-        ")": 3,
-        "]": 57,
-        "}": 1197,
-        ">": 25137
-    }
-    syntax_errors_sum = 0
-    for line in lines:
-        prev_line = line
-        line = line.strip()
-        while line != prev_line and line:
-            prev_line = line
-            line = line.replace("()", "")
-            line = line.replace("[]", "")
-            line = line.replace("{}", "")
-            line = line.replace("<>", "")
-        for char in line:
-            if char in point_mapping.keys():
-                syntax_errors_sum += point_mapping[char]
-                # print(char)
-                break
-    print(syntax_errors_sum)
+from collections import defaultdict
 
 
+flashed = defaultdict(lambda: False)
+
+
+def flash(x, y, lines):
+    total_flashes = 0
+    for dx in (-1, 0, 1):
+        if 0 > x + dx or x + dx >= len(lines[0]):
+            continue
+        for dy in (-1, 0, 1):
+            if 0 > y + dy or y + dy >= len(lines):
+                continue
+            if lines[x  + dx][y + dy] == 9:
+                if flashed[(x + dx, y + dy)]:
+                    continue
+                flashed[(x + dx, y + dy)] = True
+                total_flashes += 1 + flash(x + dx, y + dy, lines)
+                lines[x + dx][y + dy] = 0
+            else:
+                lines[x + dx][y + dy] += 1
+    return total_flashes
+
+
+def main():
+    with open("input.txt", "r") as f:
+        lines = [[int(i) for i in list(subline.strip())] for subline in f.readlines()]
+
+        total_flashes = 0
+
+        days = 100
+
+        for _ in range(days):
+            for x, line in enumerate(lines):
+                for y, square in enumerate(line):
+                    if square == 9:
+                        flashed[(x, y)] = True
+                        total_flashes += 1 + flash(x, y, lines)
+                    else:
+                        lines[x][y] += 1
+            for x, y in flashed.keys():
+                lines[x][y] = 0
+            flashed.clear()
+        print(total_flashes)
 """
