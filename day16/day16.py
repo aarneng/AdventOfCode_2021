@@ -1,74 +1,269 @@
-from collections import defaultdict
+bin_text = ""  # global var cause i don't care
+sum_pack_vers = 0
+indent = 0
 
 
-def adjacent_square_coords(current, max):
-    ret = []
-    if current[0] > 0:
-        ret.append((current[0] - 1, current[1]))
-    if current[1] > 0:
-        ret.append((current[0], current[1] - 1))
-    if current[0] < max[0]:
-        ret.append((current[0] + 1, current[1]))
-    if current[1] < max[1]:
-        ret.append((current[0], current[1] + 1))
-    return ret
+def increase_indent():
+    global indent
+    indent += 4
 
 
-def expand_horizontal(lst, n=4):
-    ret = lst
-    for _ in range(n):
-        lst = [(i % 9) + 1 for i in lst]
-        ret += lst
-    return ret
+def decrease_indent():
+    global indent
+    indent -= 4
 
 
-def expand_vertical(lst, n=4):
-    ret = lst
-    for _ in range(n):
-        lst = [[(i % 9) + 1 for i in sublist] for sublist in lst]
-        ret += lst
-    return ret
+def literal():
+    global bin_text, sum_pack_vers, indent
+    ans = ""
+    stop = False
+    len_removed = 0
+    # print("LITERAL", bin_text)
+    while not stop:
+        stop = bin_text[0] == "0"
+        bits, bin_text = bin_text[1:5], bin_text[5:]
+        len_removed += 5
+        ans += bits
+    print(" " * (indent + 4), int(ans, 2))
+    return len_removed
+
+
+def operator():
+    global bin_text, sum_pack_vers
+    length_type_ID, bin_text = bin_text[:1], bin_text[1:]
+    increase_indent()
+    # print("OPERATOR", bin_text)
+    if length_type_ID == "0":
+        sub_packet_length_ID = 15
+        sub_packet_length, bin_text = bin_text[:sub_packet_length_ID], bin_text[sub_packet_length_ID:]
+        # print("BIN TEXT HERE", bin_text, sub_packet_length)
+        # print(sub_packet_length)
+        sub_packet_length = int(sub_packet_length, 2)
+        sub_packet = bin_text[:sub_packet_length]#, bin_text[sub_packet_length:]
+        parse_sub_level_amount_bits(sub_packet_length)
+    else:
+        sub_packet_length_ID = 11
+        sub_packet_amt, bin_text = bin_text[:sub_packet_length_ID], bin_text[sub_packet_length_ID:]
+        # print("BIN TEXT HERE 2", bin_text, sub_packet_amt)
+        # print(sub_packet_amt == "")
+        # print(sub_packet_amt)
+        sub_packet_length = int(sub_packet_amt, 2)
+        sub_packet = bin_text[:sub_packet_length]
+        parse_sub_level_amount_packets(sub_packet_length)
+    decrease_indent()
+
+
+def parse_sub_level_amount_bits(bits_left):
+    global bin_text, sum_pack_vers, indent
+    # print("CALLED", bin_text)
+    while bits_left and "1" in bin_text:
+        packet_version, bin_text = bin_text[:3], bin_text[3:]
+        type_ID, bin_text = bin_text[:3], bin_text[3:]
+        print(" " * indent, "type:", int(type_ID, 2))
+        # print(packet_version, type_ID, bin_text)
+        sum_pack_vers += int(packet_version, 2)
+        bits_left -= 6
+        if type_ID == "100":
+            # literal()
+            bits_left -= literal()
+        else:
+            operator()
+
+
+def parse_sub_level_amount_packets(packets_left):
+    global bin_text, sum_pack_vers, indent
+    # print("CALLED 2", bin_text)
+    while packets_left and "1" in bin_text:
+        packet_version, bin_text = bin_text[:3], bin_text[3:]
+        sum_pack_vers += int(packet_version, 2)
+        type_ID, bin_text = bin_text[:3], bin_text[3:]
+        print(" " * indent, "type:", int(type_ID, 2))
+
+        packets_left -= 1
+        if type_ID == "100":
+            lrm = literal()
+        else:
+            operator()
+
+
+def parse_top_level():
+    global bin_text, sum_pack_vers
+    packet_version, bin_text = bin_text[:3], bin_text[3:]
+    sum_pack_vers += int(packet_version, 2)
+    type_ID, bin_text = bin_text[:3], bin_text[3:]
+    print("type:", int(type_ID, 2))
+    # print(packet_version, type_ID, bin_text)
+    if type_ID == "100":
+        literal()
+    else:
+        operator()
 
 
 def main():
     with open("input.txt", "r") as f:
+        mapping = {
+            "0": "0000",
+            "1": "0001",
+            "2": "0010",
+            "3": "0011",
+            "4": "0100",
+            "5": "0101",
+            "6": "0110",
+            "7": "0111",
+            "8": "1000",
+            "9": "1001",
+            "A": "1010",
+            "B": "1011",
+            "C": "1100",
+            "D": "1101",
+            "E": "1110",
+            "F": "1111"
+        }
+        global bin_text, sum_pack_vers
         lines = f.readlines()
-        lines = [[int(i) for i in sublist.strip()] for sublist in lines]
-        lines = [expand_horizontal(line) for line in expand_vertical(lines)]
+        for text in lines:
+            print(text)
+            sum_pack_vers = 0
+            text_as_bin = ""
+            for char in text.strip():
+                text_as_bin += mapping[char]
+            bin_text = text_as_bin
 
-        # print([expand_horizontal(line, 1) for line in expand_vertical([[1, 2, 3], [4, 6, 5]], 1)])
-        # print()
-        # for line in lines:
-        #     print(line)
-
-        distances = defaultdict(lambda: float("inf"))
-
-        current_square = (0, 0)
-        distances[current_square] = 0
-        unvisited = {(0, 1): (0, 0), (1, 0): (0, 0)}
-        end_square = (len(lines[0]) - 1, len(lines) - 1)
-
-        while current_square != end_square:
-            min_next_dist = float("inf")
-            next_square = None
-            for square, adjacent_to in unvisited.items():
-                dist = distances[adjacent_to] + lines[square[1]][square[0]]
-                if dist < min_next_dist:
-                    min_next_dist = dist
-                    next_square = square
-
-            current_square = next_square
-            neighbours = adjacent_square_coords(current_square, end_square)
-            for neighbour in neighbours:
-                y, x = neighbour[0], neighbour[1]
-                if distances[neighbour] > min_next_dist + lines[x][y]:
-                    unvisited[neighbour] = current_square
-                    distances[neighbour] = min_next_dist + lines[x][y]
-            del unvisited[current_square]
-            distances[current_square] = min_next_dist
-        print(distances[end_square])
+            parse_top_level()
+            print(sum_pack_vers)
+            print("\n\n\n")
 
 
 if __name__ == '__main__':
     main()
 
+"""
+p1
+
+bin_text = ""  # global var cause i don't care
+sum_pack_vers = 0
+
+
+def literal():
+    global bin_text, sum_pack_vers
+    ans = ""
+    stop = False
+    len_removed = 0
+    # print("LITERAL", bin_text)
+    while not stop:
+        stop = bin_text[0] == "0"
+        bits, bin_text = bin_text[1:5], bin_text[5:]
+        len_removed += 5
+        ans += bits
+    # print(int(ans, 2))
+    return len_removed
+
+
+def operator():
+    global bin_text, sum_pack_vers
+    length_type_ID, bin_text = bin_text[:1], bin_text[1:]
+    # print("OPERATOR", bin_text)
+    if length_type_ID == "0":
+        sub_packet_length_ID = 15
+        sub_packet_length, bin_text = bin_text[:sub_packet_length_ID], bin_text[sub_packet_length_ID:]
+        # print("BIN TEXT HERE", bin_text, sub_packet_length)
+        # print(sub_packet_length)
+        sub_packet_length = int(sub_packet_length, 2)
+        sub_packet = bin_text[:sub_packet_length]#, bin_text[sub_packet_length:]
+        parse_sub_level_amount_bits(sub_packet_length)
+    else:
+        sub_packet_length_ID = 11
+        sub_packet_amt, bin_text = bin_text[:sub_packet_length_ID], bin_text[sub_packet_length_ID:]
+        # print("BIN TEXT HERE 2", bin_text, sub_packet_amt)
+        # print(sub_packet_amt == "")
+        # print(sub_packet_amt)
+        sub_packet_length = int(sub_packet_amt, 2)
+        sub_packet = bin_text[:sub_packet_length]
+        parse_sub_level_amount_packets(sub_packet_length)
+
+
+def parse_sub_level_amount_bits(bits_left):
+    global bin_text, sum_pack_vers
+    # print("CALLED", bin_text)
+    while bits_left and "1" in bin_text:
+        packet_version, bin_text = bin_text[:3], bin_text[3:]
+        type_ID, bin_text = bin_text[:3], bin_text[3:]
+        # print(packet_version, type_ID, bin_text)
+        sum_pack_vers += int(packet_version, 2)
+        bits_left -= 6
+        if type_ID == "100":
+            # literal()
+            bits_left -= literal()
+        else:
+            operator()
+
+
+def parse_sub_level_amount_packets(packets_left):
+    global bin_text, sum_pack_vers
+    # print("CALLED 2", bin_text)
+    while packets_left and "1" in bin_text:
+        packet_version, bin_text = bin_text[:3], bin_text[3:]
+        sum_pack_vers += int(packet_version, 2)
+        type_ID, bin_text = bin_text[:3], bin_text[3:]
+        packets_left -= 1
+        if type_ID == "100":
+            lrm = literal()
+        else:
+            operator()
+
+
+def parse_top_level():
+    global bin_text, sum_pack_vers
+    packet_version, bin_text = bin_text[:3], bin_text[3:]
+    sum_pack_vers += int(packet_version, 2)
+    type_ID, bin_text = bin_text[:3], bin_text[3:]
+    # print(packet_version, type_ID, bin_text)
+    if type_ID == "100":
+        literal()
+    else:
+        operator()
+
+
+def main():
+    with open("input.txt", "r") as f:
+        mapping = {
+            "0": "0000",
+            "1": "0001",
+            "2": "0010",
+            "3": "0011",
+            "4": "0100",
+            "5": "0101",
+            "6": "0110",
+            "7": "0111",
+            "8": "1000",
+            "9": "1001",
+            "A": "1010",
+            "B": "1011",
+            "C": "1100",
+            "D": "1101",
+            "E": "1110",
+            "F": "1111"
+        }
+        global bin_text, sum_pack_vers
+        lines = f.readlines()
+        for text in lines:
+            print(text)
+            sum_pack_vers = 0
+            text_as_bin = ""
+            for char in text.strip():
+                text_as_bin += mapping[char]
+            bin_text = text_as_bin
+
+            parse_top_level()
+            print(sum_pack_vers)
+            print("\n\n\n")
+
+
+if __name__ == '__main__':
+    main()
+
+
+
+
+
+"""
