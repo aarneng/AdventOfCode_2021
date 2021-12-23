@@ -30,7 +30,8 @@ def explode(inp):
             return True, None, [add_right(a, left), b], right
         return False, None, inp, None
 
-    return inner(inp)[2]
+    changed, _, ans, _ = inner(inp)
+    return changed, ans
     # def inner(inp, depth, add_next=0):
     #     # print(depth, inp, add_next)
     #     to_add = 0, 0
@@ -68,28 +69,55 @@ def explode(inp):
 
 def split(inp):
     def inner(inp, already_split=False):
-        s = False
+        if isinstance(inp, int):
+            return inp, already_split
+        s = already_split
         if isinstance(inp[0], list):
-            inp[0] = inner(inp[0])
-        elif inp[0] >= 10 and not already_split:
+            inp[0], _ = inner(inp[0])
+        elif inp[0] >= 10 and not s:
             l = inp[0] / 2
             l = [floor(l), ceil(l)]
             inp[0] = l
             s = True
         if isinstance(inp[1], list):
-            inp[1] = inner(inp[1], s)
-        elif inp[1] >= 10 and not already_split and not s:
+            inp[1], _ = inner(inp[1], s)
+        elif inp[1] >= 10 and not s:
             l = inp[1] / 2
             l = [floor(l), ceil(l)]
             inp[1] = l
-        return inp
+            s = True
+        return inp, s
+
+    def inner2(x):
+        if isinstance(x, int):
+            if x >= 10:
+                return True, [x // 2, ceil(x / 2)]
+            return False, x
+        a, b = x
+        change, a = inner2(a)
+        if change:
+            return True, [a, b]
+        change, b = inner2(b)
+        return change, [a, b]
+
+    # c1, c2 = inner(inp)
+    # print(inp)
+    # print("1", (c2, c1))
+    # print("2", inner2(inp))
+    # print(inp)
     return inner(inp)
 
 
-def eval(inp):
-    # TODO
-    ...
-
+def eval_number(inp) -> int:
+    if isinstance(inp[0], list):
+        left = 3 * eval_number(inp[0])
+    else:
+        left = 3 * inp[0]
+    if isinstance(inp[1], list):
+        right = 2 * eval_number(inp[1])
+    else:
+        right = 2 * inp[1]
+    return left + right
 
 
 def main():
@@ -107,11 +135,25 @@ def main():
 
         for line in lines[1:]:
             ans = [ans, line]
-            changed = split(explode(ans))
-            while ans != changed:
-                ans = changed
-                changed = split(explode(ans))
-        print(ans)
+            x = ans
+            while True:
+                change, x = explode(x)
+                if change:
+                    continue
+                x, change = split(x)
+                if not change:
+                    break
+            ans = x
+            # did_change, ans = explode(ans)
+            # while did_change:
+            #     did_change, ans = explode(ans)
+            #     if did_change:
+            #         continue
+            #     prev = ans
+            #     ans = split(ans)
+            #     if prev == ans:
+            #         break
+        print(eval_number(ans))
 
 
 if __name__ == '__main__':
