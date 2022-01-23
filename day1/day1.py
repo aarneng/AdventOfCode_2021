@@ -3,6 +3,7 @@ def main():
         increases = 0
         sliding_window = []
         previous_window_sum = float("inf")
+        # ADDING A COMMENT FOR CLARITY
         for line in f:
             try:
                 n = int(line)
